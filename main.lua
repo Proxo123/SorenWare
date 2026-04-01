@@ -55,8 +55,8 @@ local UI             = loadModule("ui.lua")(Helpers, Config, GenESP, KillerESP, 
 -------------------------------------------------
 -- BUILD UI
 -------------------------------------------------
-local OrionLib = UI.build(State, Settings)
-if not OrionLib then return end
+local FluentLib = UI.build(State, Settings)
+if not FluentLib then return end
 
 -------------------------------------------------
 -- FULL UNLOAD
@@ -76,7 +76,7 @@ local function fullUnload()
     GenTracking.untrackAll(State)
     GenESP.cleanup(State)
 
-    pcall(function() OrionLib:Destroy() end)
+    pcall(function() FluentLib:Destroy() end)
 
     if getgenv then getgenv().GenHub = nil end
 end
