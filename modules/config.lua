@@ -79,4 +79,51 @@ function Config.reset(settings)
     Config.save(settings)
 end
 
+local PROFILE_PREFIX = "SorenWare_profile_"
+
+function Config.listProfiles()
+    local profiles = {}
+    pcall(function()
+        if listfiles then
+            for _, file in next, listfiles("") do
+                local name = file:match("SorenWare_profile_(.+)%.json$")
+                if name then table.insert(profiles, name) end
+            end
+        end
+    end)
+    return profiles
+end
+
+function Config.saveProfile(name, settings)
+    pcall(function()
+        if writefile then
+            writefile(PROFILE_PREFIX .. name .. ".json", HttpService:JSONEncode(settings))
+        end
+    end)
+end
+
+function Config.loadProfile(name)
+    local ok, data = pcall(function()
+        local path = PROFILE_PREFIX .. name .. ".json"
+        if isfile and isfile(path) then
+            return HttpService:JSONDecode(readfile(path))
+        end
+    end)
+    if ok and data then
+        for key, val in next, Defaults do
+            if data[key] == nil then data[key] = val end
+        end
+        return data
+    end
+    return nil
+end
+
+function Config.deleteProfile(name)
+    pcall(function()
+        if delfile then
+            delfile(PROFILE_PREFIX .. name .. ".json")
+        end
+    end)
+end
+
 return Config

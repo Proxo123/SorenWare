@@ -21,6 +21,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Proxo123/SorenWare/ma
 | **Custom Drain Rate** | Control how fast stamina drains (0-100%) |
 | **Custom Max Stamina** | Override max stamina value (50-500) |
 | **Persistent Config** | Settings saved to executor filesystem between sessions |
+| **Config Profiles** | Save/load named setting presets |
+| **Custom UI (SorenUI)** | Glassmorphism UI with purple accent, smooth animations, search bar |
 
 ## Project Structure
 
@@ -29,18 +31,19 @@ SorenWare/
 ├── loader.lua              ← Entry point (loadstring target)
 ├── main.lua                ← Orchestrator — loads & wires modules
 ├── modules/
-│   ├── config.lua          ← Persistent settings (load/save/defaults)
+│   ├── config.lua          ← Persistent settings + profile system
 │   ├── state.lua           ← Shared runtime state & connection management
 │   ├── logger.lua          ← Debug logging
 │   ├── helpers.lua         ← Color helpers & cached math functions
 │   ├── gen_esp.lua         ← Generator highlight ESP
 │   ├── killer_esp.lua      ← Killer drawing ESP + render loop
 │   ├── auto_gen.lua        ← Auto generator completion
-│   ├── stamina.lua         ← Stamina spoofing via hookfunction
+│   ├── stamina.lua         ← Stamina spoofing via hookmetamethod
 │   ├── gen_tracking.lua    ← Generator proximity prompt tracking
 │   ├── killer_tracking.lua ← Killer folder watcher
 │   ├── round_manager.lua   ← Round start/end detection
-│   └── ui.lua              ← Orion UI builder (all tabs)
+│   ├── ui_lib.lua          ← SorenUI — custom glassmorphism UI library
+│   └── ui.lua              ← Application UI (uses SorenUI)
 └── README.md
 ```
 

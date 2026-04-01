@@ -50,13 +50,14 @@ local Stamina        = loadModule("stamina.lua")(Logger)
 local GenTracking    = loadModule("gen_tracking.lua")(GenESP)
 local KillerTracking = loadModule("killer_tracking.lua")(KillerESP, Logger)
 local RoundManager   = loadModule("round_manager.lua")(GenTracking, KillerTracking, KillerESP, Logger)
-local UI             = loadModule("ui.lua")(Helpers, Config, GenESP, KillerESP, Stamina, Logger)
+local SorenUI       = loadModule("ui_lib.lua")()
+local UI             = loadModule("ui.lua")(SorenUI, Helpers, Config, GenESP, KillerESP, Stamina, Logger)
 
 -------------------------------------------------
 -- BUILD UI
 -------------------------------------------------
-local OrionLib = UI.build(State, Settings)
-if not OrionLib then return end
+local Window = UI.build(State, Settings)
+if not Window then return end
 
 -------------------------------------------------
 -- FULL UNLOAD
@@ -76,7 +77,7 @@ local function fullUnload()
     GenTracking.untrackAll(State)
     GenESP.cleanup(State)
 
-    pcall(function() OrionLib:Destroy() end)
+    pcall(function() Window:Destroy() end)
 
     if getgenv then getgenv().GenHub = nil end
 end
