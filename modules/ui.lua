@@ -1,30 +1,52 @@
-local SorenUI, Helpers, Config, GenESP, KillerESP, Stamina, Logger = ...
+local Helpers, Config, GenESP, KillerESP, Stamina, Logger = ...
 
 local mathFloor = Helpers.mathFloor
 
 local UI = {}
 
+local function LoadOrion()
+    local sources = {
+        "https://raw.githubusercontent.com/shlexware/Orion/main/source",
+        "https://raw.githubusercontent.com/jensonhirst/Orion/main/source",
+    }
+    for _, url in ipairs(sources) do
+        local ok, lib = pcall(function()
+            return loadstring(game:HttpGet(url))()
+        end)
+        if ok and lib then return lib end
+    end
+    return nil
+end
+
 function UI.build(state, settings)
-    local window = SorenUI:CreateWindow({
-        Title = "Generator Hub",
-        Size = UDim2.fromOffset(560, 420),
-        CloseCallback = function()
-            if getgenv and getgenv().GenHub then
-                getgenv().GenHub.Unload()
-            end
-        end,
+    local OrionLib = LoadOrion()
+    if not OrionLib then
+        warn("[SorenWare] Failed to load Orion UI library.")
+        return nil
+    end
+
+    local Window = OrionLib:MakeWindow({
+        Name = "Generator Hub",
+        HidePremium = true,
+        IntroText = "Generator Hub",
+        SaveConfig = false,
+        IntroEnabled = true,
     })
 
-    -- ═════════════════════════════════════════
-    -- GENERATORS TAB
-    -- ═════════════════════════════════════════
-    local genTab = window:CreateTab({ Name = "Generators", Icon = "rbxassetid://4483345998" })
+    -- ========== GENERATORS TAB ==========
+    local GenTab = Window:MakeTab({
+        Name = "Generators",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false,
+    })
 
-    genTab:CreateSection("Auto Generator")
+    GenTab:AddSection({ Name = "Auto Generator" })
 
-    genTab:CreateToggle({
+    GenTab:AddToggle({
         Name = "Enabled",
         Default = settings.AutoGen,
+        Save = false,
+        Flag = "AutoGenToggle",
         Callback = function(v)
             state.AutoGen = v
             settings.AutoGen = v
@@ -32,28 +54,29 @@ function UI.build(state, settings)
         end,
     })
 
-    genTab:CreateSlider({
-        Name = "Cooldown",
+    GenTab:AddSlider({
+        Name = "Cooldown (seconds)",
         Min = 0, Max = 50,
         Default = settings.AutoGenCooldown * 10,
+        Color = Color3.fromRGB(0, 170, 255),
         Increment = 1,
-        Suffix = "",
+        Save = false,
+        Flag = "CooldownSlider",
         Callback = function(v)
             settings.AutoGenCooldown = v / 10
             Config.save(settings)
         end,
     })
 
-    genTab:CreateParagraph({
-        Title = "How it works",
-        Content = "Completes generators automatically when you interact. Cooldown adds a delay between completions (value / 10 = seconds). 0 = instant.",
-    })
+    GenTab:AddParagraph("How it works", "Completes generators automatically when you interact. Cooldown adds a delay between completions. 0 = instant.")
 
-    genTab:CreateSection("Generator ESP")
+    GenTab:AddSection({ Name = "Generator ESP" })
 
-    genTab:CreateToggle({
+    GenTab:AddToggle({
         Name = "Enabled",
         Default = settings.GenESP,
+        Save = false,
+        Flag = "GenESPToggle",
         Callback = function(v)
             state.GenESP = v
             settings.GenESP = v
@@ -62,9 +85,11 @@ function UI.build(state, settings)
         end,
     })
 
-    genTab:CreateColorpicker({
+    GenTab:AddColorpicker({
         Name = "Fill Color",
         Default = Helpers.getFillColor(settings),
+        Save = false,
+        Flag = "FillColorPicker",
         Callback = function(v)
             settings.FillColor = { R = mathFloor(v.R * 255), G = mathFloor(v.G * 255), B = mathFloor(v.B * 255) }
             Config.save(settings)
@@ -72,12 +97,14 @@ function UI.build(state, settings)
         end,
     })
 
-    genTab:CreateSlider({
+    GenTab:AddSlider({
         Name = "Fill Transparency",
         Min = 0, Max = 100,
         Default = mathFloor(settings.FillTransparency * 100),
+        Color = Color3.fromRGB(255, 0, 0),
         Increment = 5,
-        Suffix = "%",
+        Save = false,
+        Flag = "FillTransSlider",
         Callback = function(v)
             settings.FillTransparency = v / 100
             Config.save(settings)
@@ -85,9 +112,11 @@ function UI.build(state, settings)
         end,
     })
 
-    genTab:CreateColorpicker({
+    GenTab:AddColorpicker({
         Name = "Outline Color",
         Default = Helpers.getOutlineColor(settings),
+        Save = false,
+        Flag = "OutlineColorPicker",
         Callback = function(v)
             settings.OutlineColor = { R = mathFloor(v.R * 255), G = mathFloor(v.G * 255), B = mathFloor(v.B * 255) }
             Config.save(settings)
@@ -95,12 +124,14 @@ function UI.build(state, settings)
         end,
     })
 
-    genTab:CreateSlider({
+    GenTab:AddSlider({
         Name = "Outline Transparency",
         Min = 0, Max = 100,
         Default = mathFloor(settings.OutlineTransparency * 100),
+        Color = Color3.fromRGB(255, 255, 255),
         Increment = 5,
-        Suffix = "%",
+        Save = false,
+        Flag = "OutlineTransSlider",
         Callback = function(v)
             settings.OutlineTransparency = v / 100
             Config.save(settings)
@@ -108,16 +139,20 @@ function UI.build(state, settings)
         end,
     })
 
-    -- ═════════════════════════════════════════
-    -- KILLER ESP TAB
-    -- ═════════════════════════════════════════
-    local killerTab = window:CreateTab({ Name = "Killer ESP", Icon = "rbxassetid://4483345998" })
+    -- ========== KILLER ESP TAB ==========
+    local KillerTab = Window:MakeTab({
+        Name = "Killer ESP",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false,
+    })
 
-    killerTab:CreateSection("Killer ESP")
+    KillerTab:AddSection({ Name = "Killer ESP" })
 
-    killerTab:CreateToggle({
+    KillerTab:AddToggle({
         Name = "Enabled",
         Default = settings.KillerESP,
+        Save = false,
+        Flag = "KillerESPToggle",
         Callback = function(v)
             state.KillerESP = v
             settings.KillerESP = v
@@ -126,80 +161,103 @@ function UI.build(state, settings)
         end,
     })
 
-    killerTab:CreateColorpicker({
+    KillerTab:AddColorpicker({
         Name = "ESP Color",
         Default = Helpers.getKillerColor(settings),
+        Save = false,
+        Flag = "KillerColorPicker",
         Callback = function(v)
             settings.KillerColor = { R = mathFloor(v.R * 255), G = mathFloor(v.G * 255), B = mathFloor(v.B * 255) }
             Config.save(settings)
         end,
     })
 
-    killerTab:CreateSection("Components")
+    KillerTab:AddSection({ Name = "Components" })
 
-    killerTab:CreateToggle({
+    KillerTab:AddToggle({
         Name = "Box",
         Default = settings.KillerBox,
+        Save = false,
+        Flag = "KillerBoxToggle",
         Callback = function(v) settings.KillerBox = v; Config.save(settings) end,
     })
 
-    killerTab:CreateSlider({
+    KillerTab:AddSlider({
         Name = "Box Thickness",
         Min = 1, Max = 5,
         Default = settings.KillerBoxThickness,
+        Color = Color3.fromRGB(255, 0, 0),
         Increment = 1,
+        Save = false,
+        Flag = "KillerBoxThickSlider",
         Callback = function(v) settings.KillerBoxThickness = v; Config.save(settings) end,
     })
 
-    killerTab:CreateToggle({
+    KillerTab:AddToggle({
         Name = "Name",
         Default = settings.KillerName,
+        Save = false,
+        Flag = "KillerNameToggle",
         Callback = function(v) settings.KillerName = v; Config.save(settings) end,
     })
 
-    killerTab:CreateToggle({
+    KillerTab:AddToggle({
         Name = "Distance",
         Default = settings.KillerDistance,
+        Save = false,
+        Flag = "KillerDistToggle",
         Callback = function(v) settings.KillerDistance = v; Config.save(settings) end,
     })
 
-    killerTab:CreateToggle({
+    KillerTab:AddToggle({
         Name = "Tracer",
         Default = settings.KillerTracer,
+        Save = false,
+        Flag = "KillerTracerToggle",
         Callback = function(v) settings.KillerTracer = v; Config.save(settings) end,
     })
 
-    killerTab:CreateSlider({
+    KillerTab:AddSlider({
         Name = "Tracer Thickness",
         Min = 1, Max = 5,
         Default = settings.KillerTracerThickness,
+        Color = Color3.fromRGB(255, 0, 0),
         Increment = 1,
+        Save = false,
+        Flag = "KillerTracerThickSlider",
         Callback = function(v) settings.KillerTracerThickness = v; Config.save(settings) end,
     })
 
-    killerTab:CreateSection("Display")
+    KillerTab:AddSection({ Name = "Display" })
 
-    killerTab:CreateSlider({
+    KillerTab:AddSlider({
         Name = "Text Size",
         Min = 10, Max = 24,
         Default = settings.KillerTextSize,
+        Color = Color3.fromRGB(255, 255, 255),
         Increment = 1,
+        Save = false,
+        Flag = "KillerTextSizeSlider",
         Callback = function(v) settings.KillerTextSize = v; Config.save(settings) end,
     })
 
-    killerTab:CreateSlider({
-        Name = "Max Distance",
+    KillerTab:AddSlider({
+        Name = "Max Distance (studs)",
         Min = 100, Max = 5000,
         Default = settings.KillerMaxDistance,
+        Color = Color3.fromRGB(255, 255, 255),
         Increment = 100,
-        Suffix = " studs",
+        Save = false,
+        Flag = "KillerMaxDistSlider",
         Callback = function(v) settings.KillerMaxDistance = v; Config.save(settings) end,
     })
 
-    -- ═════════════════════════════════════════
-    -- PLAYER TAB
-    -- ═════════════════════════════════════════
-    local playerTab = window:CreateTab({ Name = "Player", Icon = "rbxassetid://4483345998" })
+    -- ========== PLAYER TAB ==========
+    local PlayerTab = Window:MakeTab({
+        Name = "Player",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false,
+    })
 
     local function checkStaminaHook()
         if settings.InfStamina or settings.CustomDrain or settings.CustomMaxStamina then
@@ -209,11 +267,13 @@ function UI.build(state, settings)
         end
     end
 
-    playerTab:CreateSection("Infinite Stamina")
+    PlayerTab:AddSection({ Name = "Infinite Stamina" })
 
-    playerTab:CreateToggle({
+    PlayerTab:AddToggle({
         Name = "Enabled",
         Default = settings.InfStamina,
+        Save = false,
+        Flag = "InfStaminaToggle",
         Callback = function(v)
             settings.InfStamina = v
             Config.save(settings)
@@ -221,16 +281,15 @@ function UI.build(state, settings)
         end,
     })
 
-    playerTab:CreateParagraph({
-        Title = "How it works",
-        Content = "Spoofs stamina on the client so your character always thinks it has full stamina. Sprint will never stop. Server still drains real stamina but your client ignores it.",
-    })
+    PlayerTab:AddParagraph("How it works", "Spoofs stamina on the client so your character always thinks it has full stamina. Sprint will never stop. Server still drains real stamina but your client ignores it.")
 
-    playerTab:CreateSection("Custom Drain Rate")
+    PlayerTab:AddSection({ Name = "Custom Drain Rate" })
 
-    playerTab:CreateToggle({
+    PlayerTab:AddToggle({
         Name = "Enabled",
         Default = settings.CustomDrain,
+        Save = false,
+        Flag = "CustomDrainToggle",
         Callback = function(v)
             settings.CustomDrain = v
             Config.save(settings)
@@ -238,25 +297,26 @@ function UI.build(state, settings)
         end,
     })
 
-    playerTab:CreateSlider({
-        Name = "Drain Rate",
+    PlayerTab:AddSlider({
+        Name = "Drain Rate (%)",
         Min = 0, Max = 100,
         Default = settings.DrainRate,
+        Color = Color3.fromRGB(0, 255, 100),
         Increment = 5,
-        Suffix = "%",
+        Save = false,
+        Flag = "DrainRateSlider",
         Callback = function(v) settings.DrainRate = v; Config.save(settings) end,
     })
 
-    playerTab:CreateParagraph({
-        Title = "How it works",
-        Content = "Controls how fast stamina drains relative to normal. 100% = normal, 50% = half, 0% = none. Only works when Infinite Stamina is OFF.",
-    })
+    PlayerTab:AddParagraph("How it works", "Controls how fast stamina drains relative to normal. 100% = normal drain, 50% = half drain, 0% = no drain (same as infinite). Only works when Infinite Stamina is OFF.")
 
-    playerTab:CreateSection("Custom Max Stamina")
+    PlayerTab:AddSection({ Name = "Custom Max Stamina" })
 
-    playerTab:CreateToggle({
+    PlayerTab:AddToggle({
         Name = "Enabled",
         Default = settings.CustomMaxStamina,
+        Save = false,
+        Flag = "CustomMaxToggle",
         Callback = function(v)
             settings.CustomMaxStamina = v
             Config.save(settings)
@@ -264,121 +324,54 @@ function UI.build(state, settings)
         end,
     })
 
-    playerTab:CreateSlider({
+    PlayerTab:AddSlider({
         Name = "Max Stamina",
         Min = 50, Max = 500,
         Default = settings.MaxStaminaValue,
+        Color = Color3.fromRGB(0, 170, 255),
         Increment = 10,
+        Save = false,
+        Flag = "MaxStaminaSlider",
         Callback = function(v) settings.MaxStaminaValue = v; Config.save(settings) end,
     })
 
-    playerTab:CreateParagraph({
-        Title = "How it works",
-        Content = "Spoofs your max stamina value on the client. Higher max = longer sprint. Normal max is 100 for survivors, 65-70 for killers.",
+    PlayerTab:AddParagraph("How it works", "Spoofs your max stamina value on the client. Higher max = longer sprint duration with custom drain. Normal max is 100 for survivors, 65-70 for killers.")
+
+    -- ========== SETTINGS TAB ==========
+    local SettingsTab = Window:MakeTab({
+        Name = "Settings",
+        Icon = "rbxassetid://4483345998",
+        PremiumOnly = false,
     })
 
-    -- ═════════════════════════════════════════
-    -- SETTINGS TAB
-    -- ═════════════════════════════════════════
-    local settingsTab = window:CreateTab({ Name = "Settings", Icon = "rbxassetid://4483345998" })
+    SettingsTab:AddSection({ Name = "General" })
 
-    settingsTab:CreateSection("General")
-
-    settingsTab:CreateToggle({
+    SettingsTab:AddToggle({
         Name = "Debug Logging",
         Default = settings.Debug,
+        Save = false,
+        Flag = "DebugToggle",
         Callback = function(v) settings.Debug = v; Config.save(settings) end,
     })
 
-    settingsTab:CreateSection("Profiles")
+    SettingsTab:AddSection({ Name = "Data" })
 
-    local profileDropdown
-    local function refreshProfiles()
-        local list = Config.listProfiles()
-        if #list == 0 then list = { "(none)" } end
-        if profileDropdown then
-            profileDropdown:SetOptions(list)
-        end
-    end
-
-    profileDropdown = settingsTab:CreateDropdown({
-        Name = "Profile",
-        Options = { "(none)" },
-        Default = "(none)",
-        Callback = function() end,
-    })
-    refreshProfiles()
-
-    settingsTab:CreateTextbox({
-        Name = "Save As",
-        Placeholder = "profile name",
-        Callback = function(text, enter)
-            if enter and text ~= "" then
-                Config.saveProfile(text, settings)
-                refreshProfiles()
-                window:CreateNotification({
-                    Title = "Profile Saved",
-                    Content = 'Saved as "' .. text .. '"',
-                    Duration = 3,
-                    Type = "success",
-                })
-            end
-        end,
-    })
-
-    settingsTab:CreateButton({
-        Name = "Load Selected Profile",
-        Callback = function()
-            local sel = profileDropdown:Get()
-            if sel == "(none)" then return end
-            local data = Config.loadProfile(sel)
-            if data then
-                for k, v in next, data do settings[k] = v end
-                Config.save(settings)
-                window:CreateNotification({
-                    Title = "Profile Loaded",
-                    Content = 'Loaded "' .. sel .. '". Re-execute to fully apply.',
-                    Duration = 4,
-                    Type = "info",
-                })
-            end
-        end,
-    })
-
-    settingsTab:CreateButton({
-        Name = "Delete Selected Profile",
-        Callback = function()
-            local sel = profileDropdown:Get()
-            if sel == "(none)" then return end
-            Config.deleteProfile(sel)
-            refreshProfiles()
-            window:CreateNotification({
-                Title = "Profile Deleted",
-                Content = 'Deleted "' .. sel .. '"',
-                Duration = 3,
-                Type = "warning",
-            })
-        end,
-    })
-
-    settingsTab:CreateSection("Data")
-
-    settingsTab:CreateButton({
+    SettingsTab:AddButton({
         Name = "Reset All Settings",
         Callback = function()
             Config.reset(settings)
-            window:CreateNotification({
-                Title = "Settings Reset",
-                Content = "All settings reset to defaults. Re-execute to apply.",
-                Duration = 4,
-                Type = "warning",
+            OrionLib:MakeNotification({
+                Name = "Generator Hub",
+                Content = "Settings reset. Re-execute to apply.",
+                Image = "rbxassetid://4483345998",
+                Time = 5,
             })
         end,
     })
 
-    settingsTab:CreateSection("Script")
+    SettingsTab:AddSection({ Name = "Script" })
 
-    settingsTab:CreateButton({
+    SettingsTab:AddButton({
         Name = "Unload Hub",
         Callback = function()
             if getgenv and getgenv().GenHub then
@@ -387,20 +380,16 @@ function UI.build(state, settings)
         end,
     })
 
-    settingsTab:CreateParagraph({
-        Title = "Toggle Key",
-        Content = "Press Right Control to minimize/restore the window.",
-    })
-
-    -- initial notification
-    window:CreateNotification({
-        Title = "Generator Hub",
+    OrionLib:MakeNotification({
+        Name = "Generator Hub",
         Content = "Loaded! Toggle features in the menu.",
-        Duration = 4,
-        Type = "success",
+        Image = "rbxassetid://4483345998",
+        Time = 5,
     })
 
-    return window
+    OrionLib:Init()
+
+    return OrionLib
 end
 
 return UI
