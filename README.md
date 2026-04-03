@@ -1,59 +1,81 @@
 # SorenWare - Generator Hub
 
-Modular Roblox script for the Velocity executor (or any UNC-compliant executor).
+Modular Roblox script for Velocity, Synapse, or any **UNC-compliant** executor with `HttpGet` / `request`.
 
-## Quick Start
+## Quick start
 
-Paste this into your executor:
+Paste into your executor:
 
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Proxo123/SorenWare/main/loader.lua"))()
 ```
 
+The loader downloads `main.lua` and all `modules/*` from this repo on each run (always latest `main`).
+
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| **Auto Generator** | Completes generators automatically on interact, with configurable cooldown |
-| **Generator ESP** | Highlights incomplete generators with customizable colors and transparency |
-| **Killer ESP** | Drawing-based ESP with box, name, distance, and tracer |
-| **Infinite Stamina** | Client-side stamina spoof — sprint never stops |
-| **Custom Drain Rate** | Control how fast stamina drains (0-100%) |
-| **Custom Max Stamina** | Override max stamina value (50-500) |
-| **Persistent Config** | Settings saved to executor filesystem between sessions |
-| **Config Profiles** | Save/load named setting presets |
-| **Custom UI (SorenUI)** | Glassmorphism UI with purple accent, smooth animations, search bar |
+| **Auto generator** | Multi-stage puzzle firing with burst count, delay, optional wave mode, cooldown |
+| **Generator ESP** | Highlights incomplete generators; customizable fill/outline; **max distance** slider; tracks **late-spawned** `ProximityPrompt`s |
+| **Instant proximity hold** | Client-side `HoldDuration = 0` on prompts under the active map (server may still validate) |
+| **Objective ESP** | Optional **battery** and **fusebox** highlights (name heuristics); fusebox can require **battery equipped**; objective max distance |
+| **Killer ESP** | Drawing ESP: box, name, distance, tracer; color and max distance (large range) |
+| **Survivor ESP** | Same style as killer ESP, **green** default; optional world **health** text; **max distance** |
+| **Survivor health sidebar** | ScreenGui list of `PLAYERS.ALIVE` with HP text and bars |
+| **Infinite stamina** | Client-side stamina spoof |
+| **Custom drain / max stamina** | Tunable drain % and max value |
+| **Persistent config** | `GenHub_settings.json` on the executor filesystem |
+| **Config profiles** | Save/load/delete named presets |
+| **Interface (Fluent)** | Window loaded from [dawid-scripts/Fluent](https://github.com/dawid-scripts/Fluent); theme, acrylic, transparency, window size, minimize key |
 
-## Project Structure
+## UI tabs
+
+1. **Generators** — Auto gen, generator ESP + distance, instant proximity, objective ESP toggles  
+2. **Killer ESP** — Toggles, color, components, max distance  
+3. **Survivor ESP** — Same class of options + health sidebar and “show self”  
+4. **Player** — Stamina options  
+5. **Settings** — Fluent look, debug, reset, unload  
+
+Unload: **Settings → Unload Hub**, or `getgenv().GenHub.Unload()` if exposed.
+
+## Project structure
 
 ```
 SorenWare/
-├── loader.lua              ← Entry point (loadstring target)
-├── main.lua                ← Orchestrator — loads & wires modules
+├── loader.lua                 ← Entry (raw GitHub URL for loadstring)
+├── main.lua                   ← Orchestrator
 ├── modules/
-│   ├── config.lua          ← Persistent settings + profile system
-│   ├── state.lua           ← Shared runtime state & connection management
-│   ├── logger.lua          ← Debug logging
-│   ├── helpers.lua         ← Color helpers & cached math functions
-│   ├── gen_esp.lua         ← Generator highlight ESP
-│   ├── killer_esp.lua      ← Killer drawing ESP + render loop
-│   ├── auto_gen.lua        ← Auto generator completion
-│   ├── stamina.lua         ← Stamina spoofing via hookmetamethod
-│   ├── gen_tracking.lua    ← Generator proximity prompt tracking
-│   ├── killer_tracking.lua ← Killer folder watcher
-│   ├── round_manager.lua   ← Round start/end detection
-│   ├── ui_lib.lua          ← SorenUI — custom glassmorphism UI library
-│   └── ui.lua              ← Application UI (uses SorenUI)
+│   ├── config.lua             ← Defaults, save/load, profiles
+│   ├── state.lua              ← Runtime flags & connection buckets
+│   ├── logger.lua
+│   ├── helpers.lua            ← Colors (gen, killer, survivor)
+│   ├── gen_esp.lua            ← Highlights + distance loop
+│   ├── gen_tracking.lua       ← Per-gen prompts + completion
+│   ├── objective_esp.lua      ← Battery / fusebox highlights
+│   ├── prox_hold.lua          ← Instant hold sweep on map
+│   ├── killer_esp.lua
+│   ├── killer_tracking.lua    ← PLAYERS.KILLER
+│   ├── survivor_esp.lua
+│   ├── survivor_tracking.lua  ← PLAYERS.ALIVE
+│   ├── survivor_sidebar.lua   ← Teammate HP panel
+│   ├── auto_gen.lua
+│   ├── stamina.lua
+│   ├── round_manager.lua      ← GAME MAP / round lifecycle
+│   ├── ui.lua                 ← Fluent UI (fetches library at runtime)
+│   └── ui_lib.lua             ← SorenUI-style widgets (in repo; not used by default loader path)
 └── README.md
 ```
 
-## How It Works
+## How it works
 
-1. **loader.lua** is fetched via `loadstring` — it downloads `main.lua` from GitHub
-2. **main.lua** fetches each module from `modules/` and injects dependencies
-3. Each module is self-contained and receives only the dependencies it needs
-4. Updates are instant — push to GitHub and re-execute the loadstring
+1. **loader.lua** resolves the raw `main.lua` URL and runs it with a small `fetch(path)` helper.  
+2. **main.lua** loads each module from `modules/<file>` via the same fetcher and injects dependencies.  
+3. **round_manager** watches `workspace.MAPS` for `GAME MAP`, starts generator/survivor/killer/objective hooks, and cleans up when the map unloads.  
 
-## Updating
+Push to `main` and re-execute; no file redistribution needed.
 
-Just push changes to `main` branch. The loader always fetches the latest version from GitHub on each execution. No need to redistribute scripts.
+## Notes
+
+- **Objective ESP** uses **name patterns** (e.g. `battery`, `fusebox`). If a game uses different names, adjust heuristics in `modules/objective_esp.lua` or open an issue with instance paths.  
+- **Instant proximity** only affects what replicates to your client; anti-cheat or server checks may still block abuse.
