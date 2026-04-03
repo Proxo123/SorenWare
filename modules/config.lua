@@ -11,6 +11,28 @@ local Defaults = {
     AutoGenWaveMode = false,
 
     GenESP = false,
+    GenMaxDistance = 10000,
+    InstantProximity = false,
+
+    BatteryESP = false,
+    FuseboxESP = false,
+    FuseboxOnlyWithBattery = true,
+    ObjectiveMaxDistance = 8000,
+
+    SurvivorESP = false,
+    SurvivorShowSelf = false,
+    SurvivorBox = true,
+    SurvivorName = true,
+    SurvivorDistance = true,
+    SurvivorTracer = true,
+    SurvivorHealthText = true,
+    SurvivorSidebar = true,
+    SurvivorColor = { R = 0, G = 255, B = 0 },
+    SurvivorBoxThickness = 1,
+    SurvivorTracerThickness = 1,
+    SurvivorTextSize = 14,
+    SurvivorMaxDistance = 5000,
+
     FillColor = { R = 255, G = 0, B = 0 },
     FillTransparency = 0.5,
     OutlineColor = { R = 255, G = 255, B = 255 },

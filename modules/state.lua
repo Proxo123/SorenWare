@@ -2,6 +2,7 @@ local State = {
     AutoGen = false,
     GenESP = false,
     KillerESP = false,
+    SurvivorESP = false,
     RoundActive = false,
     Generators = {},
     LastCompleteTime = 0,
@@ -16,6 +17,7 @@ function State.init(settings)
     State.AutoGen = settings.AutoGen
     State.GenESP = settings.GenESP
     State.KillerESP = settings.KillerESP
+    State.SurvivorESP = settings.SurvivorESP == true
 end
 
 function State.disconnectRound()

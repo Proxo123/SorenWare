@@ -1,4 +1,4 @@
-local Helpers, Config, GenESP, KillerESP, Stamina, Logger = ...
+local Helpers, Config, GenESP, KillerESP, Stamina, Logger, SurvivorESP, ProxHold = ...
 
 local mathFloor = Helpers.mathFloor
 
@@ -41,6 +41,9 @@ local function loadFluent()
 end
 
 function UI.build(state, settings)
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+
     local Fluent = loadFluent()
     if not Fluent then
         warn("[SorenWare] Failed to load Fluent UI (check HttpGet / network).")
@@ -69,6 +72,7 @@ function UI.build(state, settings)
 
     local GenTab = Window:AddTab({ Title = "Generators", Icon = "zap" })
     local KillerTab = Window:AddTab({ Title = "Killer ESP", Icon = "eye" })
+    local SurvivorTab = Window:AddTab({ Title = "Survivor ESP", Icon = "users" })
     local PlayerTab = Window:AddTab({ Title = "Player", Icon = "user" })
     local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
 
@@ -151,6 +155,67 @@ function UI.build(state, settings)
                 settings.GenESP = v
                 Config.save(settings)
                 if v then GenESP.enable(state, settings) else GenESP.disable(state) end
+            end,
+        })
+        s2:AddSlider("GenMaxDist", {
+            Title = "Max highlight distance (studs)",
+            Description = "Incomplete generators stay highlighted within this range",
+            Default = math.clamp(settings.GenMaxDistance or 10000, 100, 20000),
+            Min = 100,
+            Max = 20000,
+            Rounding = 0,
+            Callback = function(v)
+                settings.GenMaxDistance = v
+                Config.save(settings)
+                GenESP.refreshAll(state, settings)
+                GenESP.reconcileHighlights(state, settings)
+            end,
+        })
+        s2:AddToggle("InstantProx", {
+            Title = "Instant proximity hold",
+            Description = "Sets HoldDuration to 0 on prompts under the map (client-side; game may still validate)",
+            Default = settings.InstantProximity == true,
+            Callback = function(v)
+                settings.InstantProximity = v
+                Config.save(settings)
+                if v then ProxHold.start(state, settings) else ProxHold.stop() end
+            end,
+        })
+        local sObj = GenTab:AddSection("Objectives")
+        sObj:AddToggle("BatEsp", {
+            Title = "Battery ESP",
+            Default = settings.BatteryESP == true,
+            Callback = function(v)
+                settings.BatteryESP = v
+                Config.save(settings)
+            end,
+        })
+        sObj:AddToggle("FuseEsp", {
+            Title = "Fusebox ESP",
+            Description = "When 'Require battery equipped' is on, fusebox only highlights if you hold a battery tool",
+            Default = settings.FuseboxESP == true,
+            Callback = function(v)
+                settings.FuseboxESP = v
+                Config.save(settings)
+            end,
+        })
+        sObj:AddToggle("FuseNeedBat", {
+            Title = "Fusebox requires battery equipped",
+            Default = settings.FuseboxOnlyWithBattery ~= false,
+            Callback = function(v)
+                settings.FuseboxOnlyWithBattery = v
+                Config.save(settings)
+            end,
+        })
+        sObj:AddSlider("ObjMaxDist", {
+            Title = "Objective ESP max distance",
+            Default = math.clamp(settings.ObjectiveMaxDistance or 8000, 100, 20000),
+            Min = 100,
+            Max = 20000,
+            Rounding = 0,
+            Callback = function(v)
+                settings.ObjectiveMaxDistance = v
+                Config.save(settings)
             end,
         })
     end
@@ -280,11 +345,122 @@ function UI.build(state, settings)
         })
         s:AddSlider("KillMaxDist", {
             Title = "Max Distance (studs)",
-            Default = settings.KillerMaxDistance,
+            Default = math.clamp(settings.KillerMaxDistance, 100, 20000),
             Min = 100,
-            Max = 5000,
+            Max = 20000,
             Rounding = 0,
             Callback = function(v) settings.KillerMaxDistance = v; Config.save(settings) end,
+        })
+    end
+
+    -- ========== SURVIVOR ESP ==========
+    do
+        local s = SurvivorTab:AddSection("Survivor ESP")
+        s:AddToggle("SurvEsp", {
+            Title = "Enabled",
+            Default = settings.SurvivorESP == true,
+            Callback = function(v)
+                state.SurvivorESP = v
+                settings.SurvivorESP = v
+                Config.save(settings)
+                if v then SurvivorESP.startRender(state, settings) else SurvivorESP.stopRender() end
+            end,
+        })
+        s:AddToggle("SurvSidebar", {
+            Title = "Health sidebar",
+            Description = "Left panel listing ALIVE survivors (cheat-style list)",
+            Default = settings.SurvivorSidebar ~= false,
+            Callback = function(v)
+                settings.SurvivorSidebar = v
+                Config.save(settings)
+            end,
+        })
+        s:AddToggle("SurvShowSelf", {
+            Title = "Show local player ESP",
+            Default = settings.SurvivorShowSelf == true,
+            Callback = function(v)
+                settings.SurvivorShowSelf = v
+                Config.save(settings)
+                local ch = LocalPlayer.Character
+                if ch then
+                    if v then SurvivorESP.createDrawings(ch, settings) else SurvivorESP.destroyDrawings(ch) end
+                end
+            end,
+        })
+    end
+
+    local survCp = SurvivorTab:AddColorpicker("SurvColor", {
+        Title = "ESP Color",
+        Default = Helpers.getSurvivorColor(settings),
+    })
+    survCp:OnChanged(function()
+        local v = survCp.Value
+        settings.SurvivorColor = { R = mathFloor(v.R * 255), G = mathFloor(v.G * 255), B = mathFloor(v.B * 255) }
+        Config.save(settings)
+    end)
+
+    do
+        local s = SurvivorTab:AddSection("Components")
+        s:AddToggle("SurvBox", {
+            Title = "Box",
+            Default = settings.SurvivorBox ~= false,
+            Callback = function(v) settings.SurvivorBox = v; Config.save(settings) end,
+        })
+        s:AddSlider("SurvBoxThick", {
+            Title = "Box Thickness",
+            Default = settings.SurvivorBoxThickness,
+            Min = 1,
+            Max = 5,
+            Rounding = 0,
+            Callback = function(v) settings.SurvivorBoxThickness = v; Config.save(settings) end,
+        })
+        s:AddToggle("SurvName", {
+            Title = "Name",
+            Default = settings.SurvivorName ~= false,
+            Callback = function(v) settings.SurvivorName = v; Config.save(settings) end,
+        })
+        s:AddToggle("SurvHpText", {
+            Title = "Health numbers (world)",
+            Default = settings.SurvivorHealthText ~= false,
+            Callback = function(v) settings.SurvivorHealthText = v; Config.save(settings) end,
+        })
+        s:AddToggle("SurvDist", {
+            Title = "Distance",
+            Default = settings.SurvivorDistance ~= false,
+            Callback = function(v) settings.SurvivorDistance = v; Config.save(settings) end,
+        })
+        s:AddToggle("SurvTracer", {
+            Title = "Tracer",
+            Default = settings.SurvivorTracer ~= false,
+            Callback = function(v) settings.SurvivorTracer = v; Config.save(settings) end,
+        })
+        s:AddSlider("SurvTracerThick", {
+            Title = "Tracer Thickness",
+            Default = settings.SurvivorTracerThickness,
+            Min = 1,
+            Max = 5,
+            Rounding = 0,
+            Callback = function(v) settings.SurvivorTracerThickness = v; Config.save(settings) end,
+        })
+    end
+
+    do
+        local s = SurvivorTab:AddSection("Display")
+        s:AddSlider("SurvTextSz", {
+            Title = "Text Size",
+            Default = settings.SurvivorTextSize,
+            Min = 10,
+            Max = 24,
+            Rounding = 0,
+            Callback = function(v) settings.SurvivorTextSize = v; Config.save(settings) end,
+        })
+        s:AddSlider("SurvMaxDist", {
+            Title = "Max Distance (studs)",
+            Default = math.clamp(settings.SurvivorMaxDistance, 100, 20000),
+            Min = 100,
+            Max = 20000,
+            Rounding = 0,
+            Callback = function(v) settings.SurvivorMaxDistance = v; Config.save(settings) end,
         })
     end
 

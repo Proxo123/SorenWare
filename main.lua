@@ -34,23 +34,38 @@ end
 -------------------------------------------------
 -- LOAD MODULES
 -------------------------------------------------
-local Config   = loadModule("config.lua")()
-local State    = loadModule("state.lua")()
-local Logger   = loadModule("logger.lua")()
-local Helpers  = loadModule("helpers.lua")()
+local Config = loadModule("config.lua")()
+local State = loadModule("state.lua")()
+local Logger = loadModule("logger.lua")()
+local Helpers = loadModule("helpers.lua")()
 
 local Settings = Config.load()
 State.init(Settings)
 Logger.init(Settings)
 
-local GenESP         = loadModule("gen_esp.lua")(Helpers)
-local KillerESP      = loadModule("killer_esp.lua")(Helpers, Logger)
-local AutoGen        = loadModule("auto_gen.lua")(Logger)
-local Stamina        = loadModule("stamina.lua")(Logger)
-local GenTracking    = loadModule("gen_tracking.lua")(GenESP)
+local GenESP = loadModule("gen_esp.lua")(Helpers)
+local KillerESP = loadModule("killer_esp.lua")(Helpers, Logger)
+local SurvivorESP = loadModule("survivor_esp.lua")(Helpers, Logger)
+local AutoGen = loadModule("auto_gen.lua")(Logger)
+local Stamina = loadModule("stamina.lua")(Logger)
+local GenTracking = loadModule("gen_tracking.lua")(GenESP)
 local KillerTracking = loadModule("killer_tracking.lua")(KillerESP, Logger)
-local RoundManager   = loadModule("round_manager.lua")(GenTracking, KillerTracking, KillerESP, Logger)
-local UI             = loadModule("ui.lua")(Helpers, Config, GenESP, KillerESP, Stamina, Logger)
+local SurvivorTracking = loadModule("survivor_tracking.lua")(SurvivorESP, Logger)
+local ObjectiveESP = loadModule("objective_esp.lua")(Logger)
+local ProxHold = loadModule("prox_hold.lua")(Logger)
+local SurvivorSidebar = loadModule("survivor_sidebar.lua")(Logger)
+
+local RoundManager = loadModule("round_manager.lua")({
+    GenTracking = GenTracking,
+    KillerTracking = KillerTracking,
+    KillerESP = KillerESP,
+    SurvivorTracking = SurvivorTracking,
+    SurvivorESP = SurvivorESP,
+    ObjectiveESP = ObjectiveESP,
+    Logger = Logger,
+})
+
+local UI = loadModule("ui.lua")(Helpers, Config, GenESP, KillerESP, Stamina, Logger, SurvivorESP, ProxHold)
 
 -------------------------------------------------
 -- BUILD UI
@@ -65,10 +80,16 @@ local function fullUnload()
     State.AutoGen = false
     State.GenESP = false
     State.KillerESP = false
+    State.SurvivorESP = false
 
     GenESP.disable(State)
     KillerESP.stopRender()
     KillerESP.destroyAll()
+    SurvivorESP.stopRender()
+    SurvivorESP.destroyAll()
+    ObjectiveESP.stop()
+    SurvivorSidebar.destroy()
+    ProxHold.stop()
     Stamina.disable()
 
     State.disconnectCore()
@@ -101,10 +122,14 @@ local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 RoundManager.init(State, Settings)
+SurvivorSidebar.init(State, Settings)
 AutoGen.initWatcher(State, Settings, PlayerGui)
 
 if State.GenESP then GenESP.enable(State, Settings) end
 if State.KillerESP then KillerESP.startRender(State, Settings) end
+if State.SurvivorESP then SurvivorESP.startRender(State, Settings) end
+if Settings.InstantProximity then ProxHold.start(State, Settings) end
+
 if Settings.InfStamina or Settings.CustomDrain or Settings.CustomMaxStamina then
     Stamina.enable(Settings, State)
 end

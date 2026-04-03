@@ -1,4 +1,12 @@
-local GenTracking, KillerTracking, KillerESP, Logger = ...
+local Deps = ...
+
+local GenTracking = Deps.GenTracking
+local KillerTracking = Deps.KillerTracking
+local KillerESP = Deps.KillerESP
+local SurvivorTracking = Deps.SurvivorTracking
+local SurvivorESP = Deps.SurvivorESP
+local ObjectiveESP = Deps.ObjectiveESP
+local Logger = Deps.Logger
 
 local RoundManager = {}
 
@@ -19,14 +27,19 @@ local function onRoundStart(gameMap, state, settings)
     end
 
     KillerTracking.track(state, settings)
+    SurvivorTracking.track(state, settings)
+    ObjectiveESP.start(gameMap, state, settings)
 end
 
 local function onRoundEnd(state)
     Logger.log("Round ended")
     state.RoundActive = false
+    ObjectiveESP.stop()
     state.disconnectRound()
     GenTracking.untrackAll(state)
     KillerESP.destroyAll()
+    SurvivorESP.stopRender()
+    SurvivorESP.destroyAll()
 end
 
 function RoundManager.init(state, settings)
