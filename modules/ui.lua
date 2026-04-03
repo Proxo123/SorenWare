@@ -658,8 +658,8 @@ function UI.build(state, settings)
 
     Fluent:Notify({
         Title = "Generator Hub",
-        Content = "Loaded (Fluent). Right Ctrl minimizes.",
-        Duration = 5,
+        Content = "Open the Survivor ESP tab for teammate ESP. In Generators, scroll for Objectives + max distance. Most new options start OFF — enable them. Sidebar/objectives need an active round.",
+        Duration = 10,
     })
 
     return Fluent
