@@ -47,15 +47,25 @@ function UI.build(state, settings)
         return nil
     end
 
+    local winW = math.clamp(math.floor(settings.FluentWindowW or 580), 400, 1000)
+    local winH = math.clamp(math.floor(settings.FluentWindowH or 460), 300, 900)
+
     local Window = Fluent:CreateWindow({
         Title = "Generator Hub",
         SubTitle = "SorenWare",
         TabWidth = 160,
-        Size = UDim2.fromOffset(580, 460),
-        Acrylic = false,
-        Theme = "Dark",
+        Size = UDim2.fromOffset(winW, winH),
+        Acrylic = true,
+        Theme = settings.FluentTheme or "Dark",
         MinimizeKey = Enum.KeyCode.RightControl,
     })
+
+    task.defer(function()
+        pcall(function()
+            Fluent:ToggleAcrylic(settings.FluentAcrylic == true)
+            Fluent:ToggleTransparency(settings.FluentTransparency == true)
+        end)
+    end)
 
     local GenTab = Window:AddTab({ Title = "Generators", Icon = "zap" })
     local KillerTab = Window:AddTab({ Title = "Killer ESP", Icon = "eye" })
@@ -84,7 +94,7 @@ function UI.build(state, settings)
         })
         s:AddSlider("GenCooldown", {
             Title = "Cooldown (x10 = seconds)",
-            Description = "Display 0–50 → 0–5.0s delay between auto-completions",
+            Description = "Delay before the next generator UI can auto-fire (0–5s)",
             Default = settings.AutoGenCooldown * 10,
             Min = 0,
             Max = 50,
@@ -94,9 +104,42 @@ function UI.build(state, settings)
                 Config.save(settings)
             end,
         })
+        s:AddSlider("GenBurstN", {
+            Title = "Puzzle passes (burst count)",
+            Description = "How many Event fires per generator UI (multi-stage puzzles)",
+            Default = settings.AutoGenBurstCount,
+            Min = 1,
+            Max = 24,
+            Rounding = 0,
+            Callback = function(v)
+                settings.AutoGenBurstCount = v
+                Config.save(settings)
+            end,
+        })
+        s:AddSlider("GenBurstDelay", {
+            Title = "Burst delay (ms)",
+            Description = "Wait between each FireServer in one generator",
+            Default = math.floor((settings.AutoGenBurstDelay or 0.03) * 1000 + 0.5),
+            Min = 10,
+            Max = 350,
+            Rounding = 0,
+            Callback = function(v)
+                settings.AutoGenBurstDelay = v / 1000
+                Config.save(settings)
+            end,
+        })
+        s:AddToggle("GenWave", {
+            Title = "Wave mode",
+            Description = "Fire Wires → Switches → Lever → full each round (try if burst-only fails)",
+            Default = settings.AutoGenWaveMode == true,
+            Callback = function(v)
+                settings.AutoGenWaveMode = v
+                Config.save(settings)
+            end,
+        })
         GenTab:AddParagraph({
-            Title = "How it works",
-            Content = "Completes generators when the UI opens. Cooldown is seconds = value ÷ 10. 0 = instant.",
+            Title = "How auto-gen works",
+            Content = "Each generator has several puzzle stages. The script fires the completion Event multiple times quickly. Raise burst count or lower ms delay if it still feels slow. Wave mode alternates single-part payloads. Adjust Interface tab for Fluent look.",
         })
 
         local s2 = GenTab:AddSection("Generator ESP")
@@ -310,6 +353,94 @@ function UI.build(state, settings)
     end
 
     -- ========== SETTINGS ==========
+    do
+        local iface = SettingsTab:AddSection("Interface (Fluent)")
+        local themes = Fluent.Themes or { "Dark" }
+        local themeIdx = 1
+        for i, name in ipairs(themes) do
+            if name == settings.FluentTheme then
+                themeIdx = i
+                break
+            end
+        end
+
+        iface:AddDropdown("FluentThemePick", {
+            Title = "Theme",
+            Description = "Fluent built-in themes",
+            Values = themes,
+            Default = themeIdx,
+            Callback = function(Value)
+                settings.FluentTheme = Value
+                Config.save(settings)
+                pcall(function() Fluent:SetTheme(Value) end)
+            end,
+        })
+
+        if Fluent.UseAcrylic then
+            iface:AddToggle("FluentAcrylicTgl", {
+                Title = "Acrylic blur",
+                Description = "Frosted background (needs higher graphics quality in some clients)",
+                Default = settings.FluentAcrylic == true,
+                Callback = function(v)
+                    settings.FluentAcrylic = v
+                    Config.save(settings)
+                    pcall(function() Fluent:ToggleAcrylic(v) end)
+                end,
+            })
+        end
+
+        iface:AddToggle("FluentTransTgl", {
+            Title = "Transparent panels",
+            Description = "More see-through window chrome",
+            Default = settings.FluentTransparency == true,
+            Callback = function(v)
+                settings.FluentTransparency = v
+                Config.save(settings)
+                pcall(function() Fluent:ToggleTransparency(v) end)
+            end,
+        })
+
+        iface:AddSlider("FluentWinW", {
+            Title = "Window width",
+            Description = "Saved now; apply on next execute",
+            Default = math.clamp(settings.FluentWindowW or 580, 400, 1000),
+            Min = 400,
+            Max = 1000,
+            Rounding = 0,
+            Callback = function(v)
+                settings.FluentWindowW = v
+                Config.save(settings)
+            end,
+        })
+
+        iface:AddSlider("FluentWinH", {
+            Title = "Window height",
+            Description = "Saved now; apply on next execute",
+            Default = math.clamp(settings.FluentWindowH or 460, 300, 900),
+            Min = 300,
+            Max = 900,
+            Rounding = 0,
+            Callback = function(v)
+                settings.FluentWindowH = v
+                Config.save(settings)
+            end,
+        })
+
+        local minKb = iface:AddKeybind("FluentMinKB", {
+            Title = "Minimize key",
+            Description = "Toggle hub visibility (Fluent bind)",
+            Default = settings.FluentMinimizeKey or "RightControl",
+        })
+        Fluent.MinimizeKeybind = Fluent.Options.FluentMinKB
+        minKb:OnChanged(function()
+            local opt = Fluent.Options.FluentMinKB
+            if opt and opt.Value ~= nil then
+                settings.FluentMinimizeKey = tostring(opt.Value)
+                Config.save(settings)
+            end
+        end)
+    end
+
     do
         local s = SettingsTab:AddSection("General")
         s:AddToggle("DebugLog", {

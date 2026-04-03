@@ -5,6 +5,10 @@ local CONFIG_FILE = "GenHub_settings.json"
 local Defaults = {
     AutoGen = false,
     AutoGenCooldown = 0,
+    -- Multi-puzzle generators: rapid FireServer bursts (see auto_gen.lua)
+    AutoGenBurstCount = 8,
+    AutoGenBurstDelay = 0.03,
+    AutoGenWaveMode = false,
 
     GenESP = false,
     FillColor = { R = 255, G = 0, B = 0 },
@@ -30,6 +34,14 @@ local Defaults = {
     MaxStaminaValue = 100,
 
     Debug = false,
+
+    -- Fluent UI (applied on load; some options need re-execute)
+    FluentTheme = "Dark",
+    FluentAcrylic = false,
+    FluentTransparency = false,
+    FluentMinimizeKey = "RightControl",
+    FluentWindowW = 580,
+    FluentWindowH = 460,
 }
 
 local Config = {}
