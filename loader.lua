@@ -4,12 +4,10 @@
 ]]
 
 local REPO = "https://raw.githubusercontent.com/Proxo123/SorenWare/main/"
--- Bust CDN / executor HTTP cache so a re-run pulls the latest main + modules (not an old copy).
-local CACHE_TAG = tostring(math.floor(tick() * 1000))
 
+-- Cache-bust so HttpGet does not keep serving an old main.lua / modules (GitHub + some executors cache aggressively).
 local function fetch(path)
-    local sep = (path:find("?", 1, true) and "&" or "?")
-    local url = REPO .. path .. sep .. "z=" .. CACHE_TAG
+    local url = REPO .. path .. "?t=" .. tostring(tick()) .. "_" .. tostring(math.random(1, 1e9))
     local ok, result = pcall(function()
         return game:HttpGet(url)
     end)
