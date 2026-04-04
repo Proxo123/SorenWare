@@ -12,6 +12,16 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Proxo123/SorenWare/ma
 
 The loader downloads `main.lua` and all `modules/*` from this repo on each run (always latest `main`).
 
+### Hypershot (separate loader)
+
+Drawing-based **player ESP** for games that use normal `Players` characters (e.g. Hypershot): Fluent UI, **team check** (Roblox `Team`), box / name / health / distance / tracer, enemy vs teammate colors. Config: `HypershotESP_settings.json`.
+
+```lua
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Proxo123/SorenWare/main/hypershot_esp/loader.lua"))()
+```
+
+Unload: `getgenv().HypershotESP.Unload()` or **Settings → Unload**.
+
 ## Features
 
 | Feature | Description |
